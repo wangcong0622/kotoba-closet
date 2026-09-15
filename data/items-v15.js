@@ -1,0 +1,7 @@
+export const ITEMS_V15=[
+ {id:'top_mockneck_v15',slot:'top',zh:'炭灰罗纹高领针织衫',lexeme:'knit',style:'classic',color:'black',tags:['autumn','warm'],longSleeves:true,renderParts:[{src:'assets/items/top_mockneck_v15.png',layerKey:'top'}],thumbnail:'assets/thumbs/top_mockneck_v15.png',publish:false,acceptanceNote:'Hidden pending redraw: isolated audit shows rectangular breaks at both sleeves and lower torso edges.'},
+ {id:'bottom_slacks_v15',slot:'bottom',zh:'暖米色高腰直筒西裤',lexeme:'slacks',style:'classic',color:'cream',tags:['autumn','travel'],renderParts:[{src:'assets/items/bottom_slacks_v15.png',layerKey:'bottom'}],thumbnail:'assets/thumbs/bottom_slacks_v15.png'},
+ {id:'earrings_pearl_v15',slot:'earrings',zh:'珍珠垂坠耳饰',lexeme:'earrings',style:'classic',color:'cream',tags:['elegant'],renderParts:[{src:'assets/items/earrings_pearl_v15.png',layerKey:'earrings'}],thumbnail:'assets/thumbs/earrings_pearl_v15.png'},
+ {id:'necklace_pendant_v15',slot:'necklace',zh:'月光石吊坠项链',lexeme:'necklace',style:'classic',color:'cream',tags:['elegant'],renderParts:[{src:'assets/items/necklace_pendant_v15.png',layerKey:'necklace'}],thumbnail:'assets/thumbs/necklace_pendant_v15.png'},
+ {id:'bracelet_gold_v15',slot:'bracelet',zh:'细金链手链',lexeme:'bracelet',style:'classic',color:'yellow',tags:['elegant'],renderParts:[{src:'assets/items/bracelet_gold_v15.png',layerKey:'bracelet'}],thumbnail:'assets/thumbs/bracelet_gold_v15.png'}
+];

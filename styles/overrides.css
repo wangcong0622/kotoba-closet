@@ -1,0 +1,15 @@
+.eye{position:absolute;display:block;width:14%;height:18%;top:46%;box-shadow:inset 0 -2px #2e1c17}.eye.l{left:23%}.eye.r{right:23%}.smile{position:absolute;display:block;width:23%;height:9%;left:38%}
+.stage{background:#fbf6f4 url('../assets/bright-dressing-room-v1.png') center/cover no-repeat}.stage>.window,.stage>.floor{display:none}.stage-badge{box-shadow:0 3px 14px #59424b22}
+.character>.base-rig{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:1}.character>.hair,.character>.head,.character>.neck,.character>.arm,.character>.base-top,.character>.base-bottom,.character>.leg{display:none}
+.app-shell{grid-template-columns:minmax(300px,1fr) minmax(430px,1.08fr) minmax(300px,1fr);max-width:1440px}
+.stage{width:min(100%,480px);aspect-ratio:3/4;background-size:cover;background-position:center 46%}
+.character{width:48%;height:88%;bottom:3%}
+.wear.prototype-part{transform:scale(.58);transform-origin:50% 20%}
+/* Latest scope is desktop-only: retain a stable three-column workspace at every viewport width. */
+body{min-width:1180px}
+@media(max-width:980px){.app-shell{display:grid;grid-template-columns:minmax(300px,1fr) minmax(430px,1.08fr) minmax(300px,1fr);gap:18px;padding:20px}.learn{display:block;grid-column:auto}.item-grid{max-height:calc(100vh - 300px)}}
+@media(max-width:650px){.app-shell{grid-template-columns:minmax(300px,1fr) minmax(430px,1.08fr) minmax(300px,1fr);padding:20px}.stage-wrap{order:initial}.stage{width:min(100%,480px);border-radius:28px}.wardrobe,.learn{padding:18px}.learn>*{margin-bottom:initial}.actions button span,.actions .quiet{display:inline}.actions button{padding:0 12px}}
+.runtime-hint{position:fixed;z-index:30;right:20px;bottom:20px;max-width:520px;margin:0;padding:12px 16px;border:1px solid #e9a9bb;border-radius:12px;background:#fff5f7;color:#773b50;box-shadow:0 10px 28px #59364422;font-size:14px;line-height:1.5}
+.mode-switch{display:flex;gap:7px;justify-content:center;margin:0 0 12px}.mode-switch button{min-height:36px;padding:0 12px;border:1px solid #e7d9df;border-radius:999px;background:#fff;color:#604650;font-size:13px}.mode-switch button.active{border-color:#e5a4ba;background:#f9e5ec;color:#71394e;font-weight:700}.free-mode .app-shell{grid-template-columns:minmax(300px,1fr) minmax(430px,1.08fr)}
+.learning-status,.voice-note{margin:8px 0 0;font-size:12px;line-height:1.45;color:#80606b}.voice-note{padding:8px 10px;border-radius:10px;background:#fff4dc;color:#78591b}
+.lexeme-picker{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#76545f;font-size:12px}.lexeme-picker select{min-width:0;flex:1;height:34px;border:1px solid #eadde2;border-radius:9px;background:#fff;color:#4b3740;padding:0 8px}
