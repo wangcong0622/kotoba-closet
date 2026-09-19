@@ -1,4 +1,4 @@
-const CACHE='kotoba-closet-v4';
+const CACHE='kotoba-closet-v5';
 const CORE=[
  './',
  './index.html',
@@ -10,6 +10,7 @@ const CORE=[
  './data/worn-v18.js',
  './data/content.js',
  './data/scenes.js',
+ './data/advanced-japanese.js',
  './src/game.js',
  './src/mobile.js'
 ];
