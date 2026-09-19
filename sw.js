@@ -1,5 +1,9 @@
-const CACHE='kotoba-closet-v6';
+const CACHE='kotoba-closet-v7';
 const CORE=[
+ './manifest.webmanifest',
+ './assets/icons/app-icon-180.png',
+ './assets/icons/app-icon-192.png',
+ './assets/icons/app-icon-512.png',
  './',
  './index.html',
  './styles/main.css',

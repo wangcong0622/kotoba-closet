@@ -1,0 +1,25 @@
+{
+  "name": "ことばクローゼット｜言叶衣橱",
+  "short_name": "言叶衣橱",
+  "description": "一边搭配服装，一边学习实用日语。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eaf6ff",
+  "theme_color": "#eaf6ff",
+  "icons": [
+    {
+      "src": "assets/icons/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
