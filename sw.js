@@ -1,7 +1,7 @@
-const CACHE='kotoba-closet-v7';
+const CACHE='kotoba-closet-v8';
 const CORE=[
  './manifest.webmanifest',
- './assets/icons/app-icon-180.png',
+ './apple-touch-icon.png',
  './assets/icons/app-icon-192.png',
  './assets/icons/app-icon-512.png',
  './',
