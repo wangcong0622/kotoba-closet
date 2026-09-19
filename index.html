@@ -52,20 +52,41 @@
     <aside id="learnPanel" class="learn panel" aria-label="日语学习卡">
       <div class="panel-heading"><div><p class="eyebrow">WORD OF THE LOOK</p><h2>穿一件，学一句</h2></div><button id="speakBtn" class="round" title="朗读日语">♬</button></div>
 
-      <div id="studyLevel" class="study-level" role="group" aria-label="例句难度"><button data-study-level="basic" aria-pressed="true">入门例句</button><button data-study-level="advanced" aria-pressed="false">进阶 · N3–N2</button></div>
-      <article id="wordCard" class="word-card"></article><label class="slow-control"><input id="slowSetting" type="checkbox" /> 慢一点读</label>
-            <details class="extra-settings"><summary>浏览更多词汇</summary><label class="lexeme-picker">词汇浏览<select id="lexemeSelect" aria-label="选择学习词汇"></select></label></details>
-      <details class="extra-settings scene-study"><summary>生活日语 · 当前场景</summary><div id="sceneBrief" class="scene-brief" aria-live="polite"></div></details>
-      <details id="practiceDetails" class="practice-details"><summary>练一下 · 可选</summary>
-      <div class="practice-head"><h3>轻练习</h3><button id="newQuestionBtn" class="text-btn">换一题</button></div>
-      <button id="reviewBtn" class="review-btn">复习到期内容</button>
+      <nav class="learning-tabs" role="tablist" aria-label="日语学习内容">
+        <button data-learning-tab="word" role="tab" aria-selected="true" aria-controls="learningWord">单词</button>
+        <button data-learning-tab="scene" role="tab" aria-selected="false" aria-controls="learningScene">场景</button>
+        <button data-learning-tab="practice" role="tab" aria-selected="false" aria-controls="practiceDetails">练习</button>
+      </nav>
 
-      <section id="questionCard" class="question-card"></section>
-      <section id="challengeCard" class="challenge-card"></section>
-      </details>
-      <details class="extra-settings"><summary>声音与设置</summary><label class="voice-picker">日语声音<select id="voiceSelect" aria-label="日语声音"></select></label><p id="voiceStatus" class="reading"></p><button id="voicePreview" class="text-btn">▶ 试听</button>
-      <div class="settings"><label><input id="kanaSetting" type="checkbox" checked /> 显示读音</label><label><input id="motionSetting" type="checkbox" /> 减少动效</label><button id="backupBtn" class="text-btn">导出备份</button><label class="import-label">导入备份<input id="importInput" type="file" accept="application/json" /></label></div>
-      </details>
+      <section id="learningWord" class="learning-page" data-learning-panel="word" role="tabpanel">
+        <div id="studyLevel" class="study-level" role="group" aria-label="例句难度"><button data-study-level="basic" aria-pressed="true">入门例句</button><button data-study-level="advanced" aria-pressed="false">进阶 · N3–N2</button></div>
+        <article id="wordCard" class="word-card"></article>
+        <label class="slow-control"><input id="slowSetting" type="checkbox" /> 慢一点读</label>
+        <details class="extra-settings"><summary>浏览更多词汇</summary><label class="lexeme-picker">词汇浏览<select id="lexemeSelect" aria-label="选择学习词汇"></select></label></details>
+        <details class="extra-settings"><summary>声音与设置</summary><label class="voice-picker">日语声音<select id="voiceSelect" aria-label="日语声音"></select></label><p id="voiceStatus" class="reading"></p><button id="voicePreview" class="text-btn">▶ 试听</button>
+          <div class="settings"><label><input id="kanaSetting" type="checkbox" checked /> 显示读音</label><label><input id="motionSetting" type="checkbox" /> 减少动效</label><button id="backupBtn" class="text-btn">导出备份</button><label class="import-label">导入备份<input id="importInput" type="file" accept="application/json" /></label></div>
+        </details>
+      </section>
+
+      <section id="learningScene" class="learning-page scene-page" data-learning-panel="scene" role="tabpanel" hidden>
+        <div class="learning-page-head"><div><p class="eyebrow">SCENE JAPANESE</p><h3>当前场景会话</h3></div><span id="sceneSentenceCount" class="learning-count"></span></div>
+        <div id="sceneBrief" class="scene-brief" aria-live="polite"></div>
+        <div class="learning-page-head vocabulary-head"><h3>场景词汇</h3><span class="learning-count">点击即可朗读</span></div>
+        <div id="sceneVocabulary" class="scene-vocabulary"></div>
+        <button id="scenePracticeBtn" class="scene-practice-btn">用当前场景开始练习</button>
+      </section>
+
+      <section id="practiceDetails" class="learning-page practice-page" data-learning-panel="practice" role="tabpanel" hidden>
+        <div class="practice-head"><h3>专项练习</h3><button id="newQuestionBtn" class="text-btn">换一题</button></div>
+        <div id="practiceModes" class="practice-modes" role="group" aria-label="练习类型">
+          <button data-practice-mode="word" aria-pressed="true">当前单词</button>
+          <button data-practice-mode="scene" aria-pressed="false">场景会话</button>
+          <button data-practice-mode="listening" aria-pressed="false">听力理解</button>
+        </div>
+        <button id="reviewBtn" class="review-btn">复习到期内容</button>
+        <section id="questionCard" class="question-card"></section>
+        <section id="challengeCard" class="challenge-card"></section>
+      </section>
     </aside>
   </main>
   <dialog id="albumDialog"><button id="closeAlbum" class="dialog-close" aria-label="关闭">×</button><p class="eyebrow">LOOKBOOK</p><h2>我的相册</h2><div id="albumGrid" class="album-grid"></div></dialog>
@@ -84,6 +105,3 @@
   </script>
 </body>
 </html>
-
-
-

@@ -1,3 +1,4 @@
+import {SCENE_ADVANCED_ROWS} from './scene-learning.js';
 // Original everyday expressions. These teach language, not product claims.
 const rows = [
  ['cafe','在店内喝','店内でお願いします。','てんないでおねがいします。','请在店里用。','持ち帰りでお願いします。','要坐在店里喝，怎么回答？'],
@@ -48,6 +49,7 @@ const rows = [
  ,['winter','暖手','手が冷たいので、温まりたいです。','てがつめたいので、あたたまりたいです。','手很冷，我想暖和一下。','手が冷たいので、帰りたいです。','进店后说明想暖和一下。']
  ,['dinner','推荐菜','人気の料理は何ですか。','にんきのりょうりはなんですか。','人气菜是什么？','人気の料理はどこですか。','点餐前询问推荐菜。']
  ,['dinner','结账方式','支払いは別々でお願いします。','しはらいはべつべつでおねがいします。','请分开结账。','支払いは明日でお願いします。','用餐后想礼貌要求分开结账。']
+ ,...SCENE_ADVANCED_ROWS
 ];
 export const SCENE_CONTENT = rows.map(([scene,title,jp,reading,zh,wrong,prompt],i)=>({id:`${scene}_${i}`,scene,title,jp,reading,zh,wrong,prompt}));
 export const SCENE_HINTS = {cafe:'穿上喜欢的上衣与下装，或者连衣裙，再选一双鞋。',rain:'挑一件适合雨天的外套。',shop:'选一件你想试穿的衣服。',walk:'挑一双适合散步的鞋。',birthday:'选一件想穿去生日聚会的单品。',trip:'挑一双轻便的鞋，或一个出行包。',museum:'任选经典或休闲风的一件单品。',hanami:'选一件有春天气息的单品。',summer:'挑一件轻盈上衣或连衣裙。',book:'戴上喜欢的帽子，去书店逛逛。',winter:'选一件保暖外套。',dinner:'完成一套穿搭，再选一双鞋。'};

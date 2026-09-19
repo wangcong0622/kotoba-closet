@@ -9,6 +9,7 @@ export function createQuestion({target,scene='cafe',listening=false,verb=false})
   }
   if(target.startsWith('life:')) {
     const row=SCENE_CONTENT.find(r=>r.id===target.slice(5));if(!row)return null;
+    if(listening){const others=shuffle(SCENE_CONTENT.filter(candidate=>candidate.id!==row.id&&candidate.scene===row.scene)).slice(0,3);return {target,prompt:'听一听，选择最符合的中文意思。',options:shuffle([{id:row.id,text:row.zh},...others.map(candidate=>({id:candidate.id,text:candidate.zh}))]),answer:row.id,explain:`${row.jp}（${row.zh}）`,speech:row.jp,listening:true};}
     return {target,prompt:row.prompt,options:shuffle([{id:'yes',text:row.jp},{id:'no',text:row.wrong}]),answer:'yes',explain:`${row.jp}（${row.zh}）`,speech:row.jp};
   }
   const lex=LEXEMES[target];if(!lex)return null;
