@@ -1,13 +1,14 @@
 import {playRecording,hasRecording,hasRecordings} from './recorded-voice.js';
 import {showMobileExport,restoreMobileView} from './mobile.js';
 import {normalizeStudy} from './study-state.js';
+import {normalizeWardrobe,reconcileLocks,equipBlock,randomLook,filterWardrobe} from './wardrobe-state.js';
 import {BRAND_INTROS} from '../data/brand-intros.js';
 import {rankVoices,chooseVoice} from './voice.js';
 import {SCENE_BACKGROUNDS} from '../data/backgrounds.js';
 import {ITEMS,LEXEMES,BRANDS,SCENES} from '../data/content.js';
 import {SCENE_CONTENT,SCENE_HINTS} from '../data/scenes.js';
 import {SCENE_VOCABULARY} from '../data/scene-learning.js';
-import {itemVocabulary,itemExampleSentences} from '../data/item-vocabulary.js';
+import {itemVocabulary,itemExampleSentences,itemLexeme,COLOR_LABELS} from '../data/item-vocabulary.js';
 import {advancedItemExamples,clozeExample} from '../data/advanced-japanese.js';
 import {PRODUCTION} from '../data/production.js';
 import {applyEquip} from './wardrobe.js';
@@ -24,8 +25,8 @@ for(const x of ITEMS)if(PRODUCTION[x.id]){x.renderParts=PRODUCTION[x.id].renderP
 for(const item of ITEMS){const asset=WORN_V18[item.id];if(asset){item.renderParts=asset.parts;item.thumbnail=asset.thumbnail;item.publish=true;}}
 const inventory=sortWardrobeItems(ITEMS.filter(x=>WORN_V18[x.id])),getItem=id=>inventory.find(x=>x.id===id);
 const planFor=(look,scene)=>buildWornPlan({look,getItem,backgroundSrc:SCENE_BACKGROUNDS[scene]});
-let state={schemaVersion:3,projectId:'kotoba-closet',look:{...INITIAL_LOOK},focus:'top_blouse',studyLexeme:null,favorites:[],albums:[],learning:{},settings:{kana:true,reduced:false,mode:'light',slow:false},scene:'cafe',study:normalizeStudy()};
-let history=[],future=[],question=null,answered=false,feedback='',category='all',favoritesOnly=false,voices=[],reviewMode=false,renderId=0,readyPlan=null,studyLevel='basic',learningTab='word',practiceMode='word',stageFrame=0,albumObserver=null;
+let state={schemaVersion:3,projectId:'kotoba-closet',look:{...INITIAL_LOOK},focus:'top_blouse',studyLexeme:null,favorites:[],albums:[],learning:{},settings:{kana:true,reduced:false,mode:'light',slow:false},scene:'cafe',study:normalizeStudy(),wardrobe:normalizeWardrobe()};
+let history=[],future=[],question=null,answered=false,feedback='',voices=[],reviewMode=false,renderId=0,readyPlan=null,studyLevel='basic',learningTab='word',practiceMode='word',stageFrame=0,albumObserver=null;
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 function button(text,fn,cls){const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;}
 function toast(text){$('#toast').textContent=text;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').textContent='',5000);}
@@ -33,31 +34,58 @@ function save(){try{localStorage.setItem(key,JSON.stringify(state));return true;
 try{const raw=localStorage.getItem(key);if(raw)state=normalizeSave(JSON.parse(raw));}catch{toast('旧存档无法读取，已恢复初始搭配。');}
 state.look=Object.fromEntries(Object.entries(state.look).filter(([,id])=>getItem(id)));
 if(!state.look.hair)state.look.hair='hair_straight_v23';
-function snapshot(){return JSON.stringify({look:state.look,scene:state.scene});}
-function mutate(fn){const before=snapshot();fn();if(before!==snapshot()){history.push(before);history=history.slice(-20);future=[];}question=null;answered=false;feedback='';save();render();}
-function equip(id){const target=getItem(id);if(!target)return;mutate(()=>{const result=target.slot==='hair'?{look:{...state.look,hair:id},removed:[],unequipped:false}:applyEquip(state.look,target,getItem);state.look=result.look;state.focus=id;state.studyLexeme=null;toast(result.unequipped?`已取下 ${target.zh}`:`已穿上 ${target.zh}${result.removed.length?'，并取下不兼容的内搭':''}`);});}
-function undo(redo=false){const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());Object.assign(state,JSON.parse(from.pop()));state.studyLexeme=null;state.focus=Object.values(state.look)[0]||'top_blouse';question=null;save();render();}
+state.wardrobe=normalizeWardrobe(state.wardrobe,state.look,getItem);
+let inventoryKey=null,scrollSaveTimer=0,randomSlot='top';
+function snapshot(){return JSON.stringify({look:state.look,scene:state.scene,locks:state.wardrobe.locks});}
+function mutate(fn){const before=snapshot();fn();state.wardrobe.locks=reconcileLocks(state.wardrobe.locks,state.look);if(before!==snapshot()){history.push(before);history=history.slice(-20);future=[];}question=null;answered=false;feedback='';save();render();}
+function equip(id){const target=getItem(id);if(!target)return;const blocked=equipBlock(state.look,target,state.wardrobe.locks);if(blocked){if(state.look[target.slot]===id){state.focus=id;state.studyLexeme=null;save();if(state.settings.mode!=='free')renderWord();}toast(blocked);return;}mutate(()=>{const result=target.slot==='hair'?{look:{...state.look,hair:id},removed:[],unequipped:false}:applyEquip(state.look,target,getItem);state.look=result.look;if(!result.unequipped)rememberItems([id]);state.focus=id;state.studyLexeme=null;toast(result.unequipped?`已取下 ${target.zh}`:`已穿上 ${target.zh}${result.removed.length?'，并取下不兼容的内搭':''}`);});}
+function undo(redo=false){const from=redo?future:history,to=redo?history:future;if(!from.length)return;to.push(snapshot());const restored=JSON.parse(from.pop());state.look=restored.look;state.scene=restored.scene;state.wardrobe.locks=reconcileLocks(restored.locks,state.look);state.studyLexeme=null;state.focus=Object.values(state.look)[0]||'top_blouse';question=null;save();render();}
 function activeItem(){return getItem(state.focus)||getItem(Object.values(state.look)[0])||inventory[0];}
 function activeLexeme(){return state.studyLexeme||activeItem()?.lexeme||'blouse';}
 const accessorySlots=new Set(['necklace','bracelet']);
 const categories=[['all','全部'],['top','上衣'],['bottom','下装'],['dress','连衣裙'],['outer','外套'],['accessory','首饰'],['shoes','鞋子'],['bag','包包'],['hair','发型 / 帽子']];
+function rememberItems(ids){state.wardrobe.recent=[...new Set([...ids,...state.wardrobe.recent])].slice(0,30);}
+function resetFilters(){Object.assign(state.wardrobe,{category:'all',query:'',style:'',color:'',favoritesOnly:false,view:'all'});restoreWardrobe();renderInventory();save();}
+function restoreWardrobe(){
+ state.look=Object.fromEntries(Object.entries(state.look).filter(([,id])=>getItem(id)));if(!state.look.hair)state.look.hair='hair_straight_v23';
+ state.wardrobe=normalizeWardrobe(state.wardrobe,state.look,getItem);inventoryKey=null;
+ for(const [id,value] of [['searchInput','query'],['styleFilter','style'],['colorFilter','color'],['browseFilter','view']])$('#'+id).value=state.wardrobe[value];
+ if(!$('#colorFilter').value)state.wardrobe.color='';
+}
+function randomize(slot=null){
+ const locks=state.wardrobe.locks;
+ if(slot){const candidate=inventory.find(x=>x.slot===slot);const blocked=candidate&&equipBlock(state.look,candidate,locks);if(blocked){toast(blocked);return;}}
+ mutate(()=>{const old=state.look;state.look=randomLook(old,inventory,locks,slot);const changed=Object.values(state.look).filter(id=>!Object.values(old).includes(id));rememberItems(changed);state.focus=changed[0]||state.focus;state.studyLexeme=null;toast(changed.length?(slot?'已更换这一类，保留其他单品。':'已随机搭配，保留锁定单品。'):'当前单品均已锁定或没有其他可选单品。');});
+}
 function renderMobileLookBar(){
- const bar=$('#mobileLookBar');if(!bar)return;
- const worn=Object.entries(state.look).map(([slot,id])=>({slot,item:getItem(id)})).filter(x=>x.item);
- const count=el('span',`已穿 ${worn.length} 件`,'mobile-look-count');
- const chips=worn.map(({slot,item})=>{const removable=slot!=='hair';const chip=button(`${item.zh}${removable?' ×':''}`,()=>{if(removable)equip(item.id);else{category='hair';state.focus=item.id;renderInventory();}},'mobile-look-chip');chip.setAttribute('aria-label',removable?`取下${item.zh}`:`查看${item.zh}所在分类`);return chip;});
- const clear=button('清空服饰',()=>mutate(()=>{const hair=state.look.hair;state.look=hair?{hair}:{};state.focus=hair||inventory[0]?.id;state.studyLexeme=null;toast('已清空服饰，保留当前发型。');}),'mobile-clear-look');
- clear.disabled=!worn.some(x=>x.slot!=='hair');
- bar.replaceChildren(count,...chips,clear);
+ const worn=Object.entries(state.look).map(([slot,id])=>({slot,item:getItem(id)})).filter(x=>x.item),locked=Object.keys(state.wardrobe.locks).length;
+ const manage=button('穿搭 · '+worn.length+' 件'+(locked?' · 锁定 '+locked:''),()=>{renderLookControls();$('#lookDialog').showModal();});manage.id='manageLook';manage.setAttribute('aria-haspopup','dialog');
+ const select=el('select');select.id='randomSlot';select.setAttribute('aria-label','局部随机分类');
+ for(const [slot,title] of [...categories.filter(([slot])=>!['all','accessory'].includes(slot)),['necklace','项链'],['bracelet','手链']]){if(!inventory.some(x=>x.slot===slot))continue;const option=el('option',title);option.value=slot;select.append(option);}select.value=randomSlot;select.onchange=()=>randomSlot=select.value;
+ const random=button('换这一类',()=>randomize(randomSlot));random.id='partialRandom';
+ $('#mobileLookBar').replaceChildren(manage,select,random);renderLookControls();
+}
+function renderLookControls(){
+ const focused=document.activeElement?.dataset.lockId;
+ const rows=Object.entries(state.look).map(([slot,id])=>{const item=getItem(id);if(!item)return null;const row=el('div',undefined,'look-item'),image=el('img');image.src=item.thumbnail;image.alt='';
+ const locked=state.wardrobe.locks[slot]===id;
+ const lock=button(locked?'已锁定':'锁定',()=>mutate(()=>{if(locked)delete state.wardrobe.locks[slot];else state.wardrobe.locks[slot]=id;}));lock.dataset.lockId=id;lock.setAttribute('aria-label',(locked?'解锁':'锁定')+item.zh);lock.setAttribute('aria-pressed',String(locked));
+ const remove=button('取下',()=>equip(id));remove.disabled=locked||slot==='hair';remove.setAttribute('aria-label','取下'+item.zh);row.append(image,el('strong',item.zh),lock,remove);return row;}).filter(Boolean);
+ $('#lookItems').replaceChildren(...rows);$('#unlockAll').disabled=!Object.keys(state.wardrobe.locks).length;$('#clearLook').disabled=!Object.keys(state.look).some(slot=>slot!=='hair'&&!state.wardrobe.locks[slot]);
+ if(focused&&$('#lookDialog').open)Array.from($('#lookItems [data-lock-id]')).find(x=>x.dataset.lockId===focused)?.focus();
 }
 function renderInventory(){
- $('#categoryTabs').replaceChildren(...categories.filter(([slot])=>slot==='all'||(slot==='accessory'?inventory.some(x=>accessorySlots.has(x.slot)):inventory.some(x=>x.slot===slot))).map(([slot,title])=>{const b=button(title,()=>{category=slot;renderInventory();},slot===category?'active':'');b.setAttribute('aria-pressed',String(slot===category));return b;}));
- const query=$('#searchInput').value.trim().toLowerCase(),style=$('#styleFilter').value,color=$('#colorFilter').value;
- const filtered=inventory.filter(x=>(category==='all'||(category==='accessory'?accessorySlots.has(x.slot):x.slot===category))&&(!style||x.style===style)&&(!color||x.color===color)&&(!favoritesOnly||state.favorites.includes(x.id))&&[x.zh,x.jp,x.reading,BRANDS[x.brand]?.latin,BRANDS[x.brand]?.ja].filter(Boolean).join(' ').toLowerCase().includes(query));
- $('#itemGrid').replaceChildren(...filtered.map(x=>{const card=el('div',undefined,`item ${state.look[x.slot]===x.id?'worn':''}`);const wear=button('',()=>equip(x.id),'wear-button');wear.dataset.itemId=x.id;wear.setAttribute('aria-label',`${x.slot==='hair'?'选择':state.look[x.slot]===x.id?'取下':'穿上'}${x.zh}`);wear.setAttribute('aria-pressed',String(state.look[x.slot]===x.id));const image=el('img');image.src=x.thumbnail;image.alt=x.zh;image.onerror=()=>{image.onerror=null;image.dataset.retrySrc=x.thumbnail;image.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="100" viewBox="0 0 120 100"><rect width="120" height="100" rx="12" fill="#eef2e8"/><path d="M40 24 24 37 34 50 40 45v32h40V45l6 5 10-13-16-13c-6 9-14 9-20 0Z" fill="none" stroke="#a3b39a" stroke-width="3"/><text x="60" y="94" text-anchor="middle" fill="#708567" font-size="11">待加载</text></svg>');};image.loading='lazy';image.decoding='async';image.fetchPriority='low';wear.append(image,el('strong',x.zh),el('small',x.jp));const fav=button(state.favorites.includes(x.id)?'♥':'♡',()=>{state.favorites=state.favorites.includes(x.id)?state.favorites.filter(id=>id!==x.id):[...state.favorites,x.id];save();renderInventory();},'fav');fav.setAttribute('aria-label',`收藏${x.zh}`);fav.setAttribute('aria-pressed',String(state.favorites.includes(x.id)));card.append(wear,fav);if(x.brand)card.append(el('span',BRANDS[x.brand].latin,'brand-tag'));return card;}));
- if(!filtered.length)$('#itemGrid').append(el('p','没有找到单品，试试其他筛选条件。'));
- renderMobileLookBar();
- $('.prototype-note').textContent=`${inventory.filter(x=>x.slot!=='hair').length} 件服饰 · ${inventory.filter(x=>x.slot==='hair').length} 款发型与帽子 · 点击穿上，再点取下`;
+ const grid=$('#itemGrid'),filters=state.wardrobe;
+ if(inventoryKey)filters.positions[inventoryKey]=grid.scrollTop;
+ inventoryKey=JSON.stringify([filters.category,filters.query,filters.style,filters.color,filters.favoritesOnly,filters.view]);
+ filters.positions=Object.fromEntries(Object.entries(filters.positions).slice(-40));
+ $('#categoryTabs').replaceChildren(...categories.filter(([slot])=>slot==='all'||(slot==='accessory'?inventory.some(x=>accessorySlots.has(x.slot)):inventory.some(x=>x.slot===slot))).map(([slot,title])=>{const b=button(title,()=>{filters.category=slot;if(!['all','accessory'].includes(slot))randomSlot=slot;renderInventory();save();},slot===filters.category?'active':'');b.setAttribute('aria-pressed',String(slot===filters.category));return b;}));
+ const filtered=filterWardrobe(inventory,filters,state.look,state.favorites,BRANDS);
+ grid.replaceChildren(...filtered.map(x=>{const card=el('div',undefined,'item '+(state.look[x.slot]===x.id?'worn':''));const wear=button('',()=>equip(x.id),'wear-button');wear.dataset.itemId=x.id;wear.setAttribute('aria-label',(state.wardrobe.locks[x.slot]===x.id?'查看已锁定':x.slot==='hair'?'选择':state.look[x.slot]===x.id?'取下':'穿上')+x.zh);wear.setAttribute('aria-pressed',String(state.look[x.slot]===x.id));const image=el('img');image.src=x.thumbnail;image.alt=x.zh;image.onerror=()=>{image.onerror=null;image.dataset.retrySrc=x.thumbnail;image.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="100"><rect width="120" height="100" rx="12" fill="#eef2e8"/><text x="60" y="55" text-anchor="middle" fill="#708567" font-size="12">待加载</text></svg>');};image.loading='lazy';image.decoding='async';image.fetchPriority='low';wear.append(image,el('strong',x.zh),el('small',x.jp));const fav=button(state.favorites.includes(x.id)?'♥':'♡',()=>{state.favorites=state.favorites.includes(x.id)?state.favorites.filter(id=>id!==x.id):[...state.favorites,x.id];save();renderInventory();},'fav');fav.setAttribute('aria-label','收藏'+x.zh);fav.setAttribute('aria-pressed',String(state.favorites.includes(x.id)));card.append(wear,fav);if(x.brand)card.append(el('span',BRANDS[x.brand].latin,'brand-tag'));if(state.wardrobe.locks[x.slot]===x.id)card.append(el('span','已锁定','item-lock'));return card;}));
+ if(!filtered.length){const empty=el('div',undefined,'wardrobe-empty');empty.append(el('p',filters.view==='recent'?'这里还没有匹配的单品。穿上单品后会记入最近使用。':'没有匹配的单品，试试调整筛选条件。'),button('查看全部单品',resetFilters));grid.append(empty);}
+ grid.scrollTop=filters.positions[inventoryKey]||0;
+ const count=Number(Boolean(filters.style))+Number(Boolean(filters.color));$('#openFilters').textContent='筛选'+(count?' · '+count:'');$('#openFilters').setAttribute('aria-pressed',String(count>0));$('#favoriteFilter').setAttribute('aria-pressed',String(filters.favoritesOnly));$('#wardrobeCount').textContent=filtered.length+' 件';$('#filterSummary').textContent='当前筛选：'+filtered.length+' 件匹配单品';
+ renderMobileLookBar();$('.prototype-note').textContent=inventory.length+' 件单品 · 锁定喜欢的单品，再试试局部随机';save();
 }
 window.addEventListener('online',renderInventory);
 async function renderStage(ticket=++renderId){const look={...state.look};const scene=state.scene;const canvas=$('#outfitCanvas');if(readyPlan&&canvas.dataset.look===JSON.stringify(look)&&canvas.dataset.scene===scene)return;const plan=planFor(look,scene);try{const buffer=document.createElement('canvas');buffer.width=1024;buffer.height=1536;await drawPlan(buffer,plan);if(ticket!==renderId)return;canvas.getContext('2d').clearRect(0,0,1024,1536);canvas.getContext('2d').drawImage(buffer,0,0);canvas.dataset.look=JSON.stringify(look);canvas.dataset.scene=scene;canvas.dataset.renderSource=JSON.stringify(plan.renderSource||{engine:'unknown'});readyPlan=plan;$('#exportBtn').disabled=false;$('#stage').setAttribute('aria-label',`当前穿搭：${Object.values(look).map(id=>getItem(id)?.zh).filter(Boolean).join('、')}`);}catch(error){if(ticket===renderId){readyPlan=null;$('#exportBtn').disabled=true;toast(error.message);}}}
@@ -71,6 +99,7 @@ function sentence(row,sessionKey){
  let blanked=Boolean(meta&&saved.blanked),translationHidden=typeof saved.translationHidden==='boolean'?saved.translationHidden:blanked;
  const persistSentence=()=>{if(sessionKey){state.study.sentences[sessionKey]={blanked,translationHidden};save();}};
  const box=el('div',undefined,`sentence-block${meta?' advanced-sentence':''}`),sentenceText=el('p',jp,'sentence'),readingText=state.settings.kana?el('p',reading,'reading'):null,translation=el('p',zh,'translation'),actions=el('div',undefined,'sentence-actions');
+ if(row.context)box.append(el('small',row.context,'example-context'));
  if(meta){const tags=el('div',undefined,'grammar-tags');tags.append(el('span',meta.level,'level-tag'),el('strong',meta.grammar));box.append(tags);}
  box.append(sentenceText);if(readingText)box.append(readingText);box.append(translation);
  actions.append(voiceButton(jp));
@@ -88,7 +117,7 @@ function sentence(row,sessionKey){
  }
  box.append(actions);return box;
 }
-function renderWord(){const id=activeLexeme(),lex=LEXEMES[id],item=activeItem(),itemMode=!state.studyLexeme&&item&&item.lexeme===id;const basicExamples=itemMode?[...lex.sentences,...itemExampleSentences(item,lex)]:lex.sentences;const examples=studyLevel==='advanced'?advancedItemExamples(itemMode?item:null,lex):basicExamples;state.learning=markViewed(state.learning,id);save();const card=$('#wordCard');card.classList.toggle('advanced',studyLevel==='advanced');const positionKey=`${itemMode?'item:'+item.id:'lexeme:'+id}:${studyLevel}`,sentenceIndex=(state.study.wordPositions[positionKey]||0)%examples.length;const next=button('',()=>{const current=(Number(card.dataset.sentenceIndex||0)+1)%examples.length;card.dataset.sentenceIndex=String(current);state.study.wordPositions[positionKey]=current;save();card.querySelector('.sentence-block').replaceWith(sentence(examples[current],`${positionKey}:${current}`));next.textContent=`${studyLevel==='advanced'?'换个句型':'换一句'}（${current+1}/${examples.length}）`;},'text-btn');next.textContent=`${studyLevel==='advanced'?'换个句型':'换一句'}（${sentenceIndex+1}/${examples.length}）`;card.dataset.sentenceIndex=String(sentenceIndex);card.replaceChildren(el('p',lex.jp,'jp'));if(state.settings.kana)card.append(el('p',lex.reading,'reading'));card.append(el('p',lex.zh,'meaning'),el('span',`搭配动词：${lex.verb}`,'verb'));if(itemMode){const vocab=el('div',undefined,'item-vocabulary');itemVocabulary(item,lex).forEach(({label,word})=>{const chip=el('div',undefined,'vocab-chip');chip.append(el('small',label),el('strong',word.jp),...(state.settings.kana?[el('span',word.reading)]:[]),el('em',word.zh));vocab.append(chip);});card.append(vocab);}card.append(voiceButton(lex.jp,'▶ 单词发音'),sentence(examples[sentenceIndex],`${positionKey}:${sentenceIndex}`),next);if(!state.studyLexeme&&item?.brand){const brand=BRANDS[item.brand],info=el('div',undefined,'brand-info');info.append(el('strong',`${brand.latin}｜${brand.ja}`),voiceButton(brand.ja,'▶ 品牌发音'),button('练品牌名',()=>ask(`brand:${item.brand}`),'text-btn'));const source=el('a','官方款式参考 ↗');source.href=item.sourceUrl;source.target='_blank';source.rel='noopener noreferrer';if(item.sourceUrl)info.append(source);const intro=BRAND_INTROS[item.brand];if(intro){info.append(el('p',intro[0],'brand-intro-jp'),el('p',intro[1],'brand-intro-zh'),voiceButton(intro[0],'▶ 品牌介绍'));}card.append(info);}if(!voices.length&&!hasRecordings())card.append(el('p','此设备暂无日语声音，文字练习正常可用。','voice-note'));$('#lexemeSelect').value=id;renderReviewCount();}
+function renderWord(){const id=activeLexeme(),item=activeItem(),itemMode=!state.studyLexeme&&item&&item.lexeme===id,lex=itemMode?itemLexeme(item,LEXEMES[id]):LEXEMES[id];const basicExamples=itemMode?[...itemExampleSentences(item,lex).map(row=>Object.assign([...row],{context:'单品描述'})),...lex.sentences.map(row=>Object.assign([...row],{context:'词汇例句'}))]:lex.sentences;const examples=studyLevel==='advanced'?advancedItemExamples(itemMode?item:null,lex):basicExamples;state.learning=markViewed(state.learning,id);save();const card=$('#wordCard');card.classList.toggle('advanced',studyLevel==='advanced');const positionKey=`${itemMode?'item:'+item.id:'lexeme:'+id}:${studyLevel}`,sentenceIndex=(state.study.wordPositions[positionKey]||0)%examples.length;const next=button('',()=>{const current=(Number(card.dataset.sentenceIndex||0)+1)%examples.length;card.dataset.sentenceIndex=String(current);state.study.wordPositions[positionKey]=current;save();card.querySelector('.sentence-block').replaceWith(sentence(examples[current],`${positionKey}:${current}`));next.textContent=`${studyLevel==='advanced'?'换个句型':'换一句'}（${current+1}/${examples.length}）`;},'text-btn');next.textContent=`${studyLevel==='advanced'?'换个句型':'换一句'}（${sentenceIndex+1}/${examples.length}）`;card.dataset.sentenceIndex=String(sentenceIndex);card.replaceChildren(el('p',lex.jp,'jp'));if(state.settings.kana)card.append(el('p',lex.reading,'reading'));card.append(el('p',lex.zh,'meaning'),el('span',`搭配动词：${lex.verb}`,'verb'));if(itemMode){const vocab=el('div',undefined,'item-vocabulary');itemVocabulary(item,lex).forEach(({label,word})=>{const chip=el('div',undefined,'vocab-chip');chip.append(el('small',label),el('strong',word.jp),...(state.settings.kana?[el('span',word.reading)]:[]),el('em',word.zh));vocab.append(chip);});card.append(vocab);}card.append(voiceButton(lex.jp,'▶ 单词发音'),sentence(examples[sentenceIndex],`${positionKey}:${sentenceIndex}`),next);if(!state.studyLexeme&&item?.brand){const brand=BRANDS[item.brand],info=el('div',undefined,'brand-info');info.append(el('strong',`${brand.latin}｜${brand.ja}`),voiceButton(brand.ja,'▶ 品牌发音'),button('练品牌名',()=>ask(`brand:${item.brand}`),'text-btn'));const source=el('a','官方款式参考 ↗');source.href=item.sourceUrl;source.target='_blank';source.rel='noopener noreferrer';if(item.sourceUrl)info.append(source);const intro=BRAND_INTROS[item.brand];if(intro){info.append(el('p',intro[0],'brand-intro-jp'),el('p',intro[1],'brand-intro-zh'),voiceButton(intro[0],'▶ 品牌介绍'));}card.append(info);}if(!voices.length&&!hasRecordings())card.append(el('p','此设备暂无日语声音，文字练习正常可用。','voice-note'));$('#lexemeSelect').value=id;renderReviewCount();}
 function renderReviewCount(){const count=dueTargets(state.learning).filter(id=>createQuestion({target:id})).length;$('#reviewBtn').textContent=`复习到期内容 · ${count}`;$('#reviewBtn').disabled=count===0;}
 function selectLearningTab(tab){learningTab=tab;state.study.tab=tab;save();document.querySelectorAll('[data-learning-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.learningTab===tab)));document.querySelectorAll('[data-learning-panel]').forEach(panel=>panel.hidden=panel.dataset.learningPanel!==tab);}
 function setPracticeMode(mode){const changed=practiceMode!==mode;practiceMode=mode;state.study.practiceMode=mode;if(changed){question=null;answered=false;feedback='';}save();document.querySelectorAll('[data-practice-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.practiceMode===mode)));renderQuestion();}
@@ -115,7 +144,7 @@ function openAlbum(){
  for(const album of [...state.albums].reverse()){
   const card=el('article',undefined,'album-look'),name=el('input');name.value=album.name;name.maxLength=60;name.setAttribute('aria-label','穿搭名称');name.onchange=()=>{album.name=name.value.trim()||'我的穿搭';save();};
   const canvas=el('canvas');canvas.width=256;canvas.height=384;canvas.drawAlbum=()=>drawPlan(canvas,planFor(album.look,album.scene)).catch(()=>{canvas.setAttribute('aria-label','穿搭预览加载失败');});
-  card.append(canvas,name,button('恢复穿搭',()=>{mutate(()=>{state.look=cleanLook(album.look);state.scene=album.scene;state.studyLexeme=null;state.focus=Object.values(state.look)[0]||'top_blouse';});$('#albumDialog').close();}),button('删除',()=>{state.albums=state.albums.filter(a=>a.id!==album.id);save();$('#albumCount').textContent=state.albums.length;openAlbum();},'text-btn'));
+  card.append(canvas,name,button('恢复穿搭',()=>{mutate(()=>{state.wardrobe.locks={};state.look=cleanLook(album.look);state.scene=album.scene;state.studyLexeme=null;state.focus=Object.values(state.look)[0]||'top_blouse';});$('#albumDialog').close();}),button('删除',()=>{state.albums=state.albums.filter(a=>a.id!==album.id);save();$('#albumCount').textContent=state.albums.length;openAlbum();},'text-btn'));
   grid.append(card);if(albumObserver)albumObserver.observe(canvas);else canvas.drawAlbum();
  }
  if(!state.albums.length)grid.append(el('p','保存第一套穿搭，让今天留下来。'));
@@ -125,14 +154,20 @@ $('#albumDialog').addEventListener('close',()=>{if(albumObserver)albumObserver.d
 
 function download(blob,name){const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 async function exportLook(){const b=$('#exportBtn');b.disabled=true;try{const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=1536;const plan=planFor({...state.look},state.scene);if(plan.prototypeItems.length)throw Error('当前搭配包含尚未完成的素材');await drawPlan(canvas,plan);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('图片导出失败，请重试');if(matchMedia('(max-width:899px)').matches){showMobileExport(blob);}else{download(blob,'言叶衣橱-今日穿搭.png');}toast('已生成与舞台一致的穿搭图片。');}catch(e){toast(e.message);}finally{b.disabled=false;}}
-async function importBackup(file){try{if(!file||file.size>1024*1024)throw Error('请选择1MB以内的备份文件');const next=normalizeSave(JSON.parse(await file.text()));state=next;history=[];future=[];question=null;answered=false;feedback='';reviewMode=false;restoreStudy();save();render();restoreMobileView(state.study.mobileView);toast('已恢复备份。');}catch(e){toast(`导入失败：${e.message}`);}finally{$('#importInput').value='';}}
+async function importBackup(file){try{if(!file||file.size>1024*1024)throw Error('请选择1MB以内的备份文件');const next=normalizeSave(JSON.parse(await file.text()));state=next;restoreWardrobe();history=[];future=[];question=null;answered=false;feedback='';reviewMode=false;restoreStudy();save();render();restoreMobileView(state.study.mobileView);toast('已恢复备份。');}catch(e){toast(`导入失败：${e.message}`);}finally{$('#importInput').value='';}}
 $('#sceneSelect').replaceChildren(...SCENES.map(([id,name])=>{const o=el('option',name);o.value=id;return o;}));
 $('#lexemeSelect').replaceChildren(...Object.entries(LEXEMES).map(([id,l])=>{const o=el('option',`${l.jp}｜${l.zh}`);o.value=id;return o;}));
 $('#undoBtn').onclick=()=>undo();$('#redoBtn').onclick=()=>undo(true);
-$('#resetBtn').onclick=()=>mutate(()=>{state.look={...INITIAL_LOOK};state.studyLexeme=null;state.focus='top_blouse';});
-$('#randomBtn').onclick=()=>mutate(()=>{state.look={};const slots=Math.random()<.4?['dress']:['top','bottom'];for(const slot of [...slots,'hair','shoes','bag']){const x=shuffle(inventory.filter(i=>i.slot===slot))[0];if(x)state.look[slot]=x.id;}state.focus=Object.values(state.look)[0];state.studyLexeme=null;});
-for(const id of ['searchInput','styleFilter','colorFilter'])$('#'+id).addEventListener(id==='searchInput'?'input':'change',renderInventory);
-$('#favoriteFilter').onclick=()=>{favoritesOnly=!favoritesOnly;$('#favoriteFilter').setAttribute('aria-pressed',String(favoritesOnly));renderInventory();};
+$('#resetBtn').onclick=()=>mutate(()=>{state.wardrobe.locks={};state.look={...INITIAL_LOOK};state.studyLexeme=null;state.focus='top_blouse';});
+$('#randomBtn').onclick=()=>randomize();
+$('#colorFilter').replaceChildren(...[['','全部颜色'],...Object.entries(COLOR_LABELS).filter(([color])=>inventory.some(x=>x.color===color))].map(([value,label])=>{const option=el('option',label);option.value=value;return option;}));
+for(const [id,field,event] of [['searchInput','query','input'],['styleFilter','style','change'],['colorFilter','color','change'],['browseFilter','view','change']])$('#'+id).addEventListener(event,e=>{state.wardrobe[field]=e.target.value;renderInventory();save();});
+$('#favoriteFilter').onclick=()=>{state.wardrobe.favoritesOnly=!state.wardrobe.favoritesOnly;renderInventory();save();};
+$('#itemGrid').addEventListener('scroll',()=>{if(!inventoryKey)return;state.wardrobe.positions[inventoryKey]=$('#itemGrid').scrollTop;clearTimeout(scrollSaveTimer);scrollSaveTimer=setTimeout(save,180);},{passive:true});
+window.addEventListener('pagehide',save);
+$('#openFilters').onclick=()=>$('#filterDialog').showModal();$('#closeFilters').onclick=$('#applyFilters').onclick=()=>$('#filterDialog').close();$('#clearFilters').onclick=resetFilters;
+$('#lookDialog').addEventListener('close',()=>$('#manageLook')?.focus());$('#closeLook').onclick=()=>$('#lookDialog').close();$('#unlockAll').onclick=()=>mutate(()=>state.wardrobe.locks={});
+$('#clearLook').onclick=()=>mutate(()=>{state.look=Object.fromEntries(Object.entries(state.look).filter(([slot])=>slot==='hair'||state.wardrobe.locks[slot]));state.focus=Object.values(state.look)[0]||inventory[0]?.id;state.studyLexeme=null;toast('已清空未锁服饰，保留发型和锁定单品。');});
 function setMode(mode){state.settings.mode=mode;question=null;save();render();}
 $('#learningToggle').onclick=()=>setMode(state.settings.mode==='free'?'light':'free');document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 $('#lexemeSelect').onchange=e=>{state.studyLexeme=e.target.value;question=null;renderWord();renderQuestion();};
@@ -141,7 +176,7 @@ document.querySelectorAll('[data-learning-tab]').forEach(control=>control.onclic
 document.querySelectorAll('[data-practice-mode]').forEach(control=>control.onclick=()=>setPracticeMode(control.dataset.practiceMode));
 $('#sceneSelect').onchange=e=>{reviewMode=false;mutate(()=>{state.scene=e.target.value;});toast('背景与生活例句已切换。');};
 $('#challengeBtn').onclick=()=>toast(challengeMet()?'搭配条件满足！接下来可以练一句生活日语。':SCENE_HINTS[state.scene]);
-$('#newQuestionBtn').onclick=()=>ask();$('#reviewBtn').onclick=()=>{reviewMode=true;ask();};$('#speakBtn').onclick=()=>{if(learningTab==='scene'){const rows=SCENE_CONTENT.filter(row=>row.scene===state.scene),index=Number($('#sceneBrief').dataset.sceneIndex||0);speak(rows[index]?.jp||LEXEMES[activeLexeme()].jp);}else speak(LEXEMES[activeLexeme()].jp);};
+$('#newQuestionBtn').onclick=()=>ask();$('#reviewBtn').onclick=()=>{reviewMode=true;ask();};$('#speakBtn').onclick=()=>{if(learningTab==='scene'){const rows=SCENE_CONTENT.filter(row=>row.scene===state.scene),index=Number($('#sceneBrief').dataset.sceneIndex||0);speak(rows[index]?.jp||LEXEMES[activeLexeme()].jp);}else speak((state.studyLexeme?LEXEMES[activeLexeme()]:itemLexeme(activeItem(),LEXEMES[activeLexeme()])).jp);};
 $('#saveLookBtn').onclick=()=>{if(state.albums.length>=30){toast('相册已满30套，请先删除不需要的穿搭。');return;}state.albums.push({id:crypto.randomUUID(),name:`${SCENES.find(s=>s[0]===state.scene)[1]} · ${state.albums.length+1}`,look:{...state.look},scene:state.scene});save();$('#albumCount').textContent=state.albums.length;toast('穿搭已保存，可在相册改名。');};
 $('#albumBtn').onclick=openAlbum;$('#closeAlbum').onclick=()=>$('#albumDialog').close();$('#exportBtn').onclick=exportLook;
 $('#backupBtn').onclick=()=>download(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'言叶衣橱-备份.json');$('#importInput').onchange=e=>importBackup(e.target.files[0]);
@@ -155,4 +190,4 @@ function restoreStudy(){
  selectLearningTab(state.study.tab);setPracticeMode(state.study.practiceMode);
 }
 document.addEventListener('kotoba:mobile-view',event=>{state.study.mobileView=event.detail;save();});
-restoreStudy();render();refreshVoices();restoreMobileView(state.study.mobileView);document.body.dataset.appReady='true';
+restoreWardrobe();restoreStudy();render();refreshVoices();restoreMobileView(state.study.mobileView);document.body.dataset.appReady='true';

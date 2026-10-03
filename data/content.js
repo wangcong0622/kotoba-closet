@@ -1,4 +1,5 @@
 import {BATCH_ITEMS} from './batch-items.js';
+import { ITEM_DESCRIPTIONS } from './item-descriptions.js';
 import {completeCatalog} from './complete-v18.js';
 import {ITEMS_V7} from './items-v7.js';
 import {ITEMS_V10} from './items-v10.js';
@@ -118,3 +119,9 @@ for(const [id,zh,jp,brand,color,url] of [
  ['dress_ralph_v27','Ralph Lauren 藏蓝系带衬衫裙','ベルト付きシャツワンピース','ralphlauren','navy','https://www.ralphlauren.com/women-clothing-dresses/fit-and-flare-shirtdress/0039104880.html'],
  ['dress_unikko_v27','Marimekko Unikko 花朵连衣裙','花柄ワンピース','marimekko','pink','https://www.marimekko.jp/shop/marimekko/item/view/shop_product_id/28059']]){
  LEXEMES[id]={jp,reading:jp.replace('付き','つき').replace('花柄','はながら'),zh,verb:'着る',sentences:[['今日はワンピースで出かけます。','きょうはワンピースででかけます。','今天穿连衣裙出门。'],['このワンピースは動きやすいです。','このワンピースはうごきやすいです。','这条连衣裙活动起来很方便。']]};ITEMS.push({id,slot:'dress',zh,jp,reading:LEXEMES[id].reading,lexeme:id,brand,color,style:brand==='marimekko'?'sweet':'classic',verb:'着る',tags:['spring'],sourceUrl:url});}
+LEXEMES.denimshirt={jp:'デニムシャツ',reading:'デニムシャツ',zh:'牛仔衬衫',verb:'着る',sentences:[['今日はデニムシャツを着ます。','きょうはデニムシャツをきます。','今天穿牛仔衬衫。']]};
+for(const item of ITEMS){
+ const desc=ITEM_DESCRIPTIONS[item.id];if(!desc)continue;
+ item.color=desc.color;if(desc.name)item.zh=desc.name;if(desc.headwear)item.headwear=true;
+ if(desc.kind){[item.jp,item.reading,,item.verb]=desc.kind;if(item.id==='hair_straw_pearl_v26'){item.headwear=true;Object.assign(LEXEMES[item.lexeme],{jp:item.jp,reading:item.reading,zh:desc.kind[2],verb:item.verb,sentences:[['この帽子をかぶります。','このぼうしをかぶります。','戴上这顶帽子。']]});}else item.lexeme='denimshirt';}
+}

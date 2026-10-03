@@ -2,6 +2,7 @@ import { ITEMS, LEXEMES, BRANDS, SCENES } from '../data/content.js';
 import { normalizeLearning } from './learning.js';
 import { SCENE_CONTENT } from '../data/scenes.js';
 import { normalizeStudy } from './study-state.js';
+import { normalizeWardrobe } from './wardrobe-state.js';
 const byId = new Map(ITEMS.map(item => [item.id, item]));
 export const INITIAL_LOOK = {hair:'hair_straight_v23',top:'top_blouse',bottom:'bottom_pleat',shoes:'shoes_maryjane_socks_v19'};
 export function cleanLook(value) {
@@ -30,7 +31,8 @@ export function normalizeSave(raw) {
   if(typeof raw.settings?.voiceURI==='string')settings.voiceURI=raw.settings.voiceURI;
   if (['free','light','scene'].includes(raw.settings?.mode)) settings.mode = raw.settings.mode;
   const albums = (Array.isArray(raw.albums)?raw.albums:[]).filter(a => a && a.look && typeof a.look==='object' && !Array.isArray(a.look)).slice(-30).map((a,i)=>({id:String(a.id??`import-${i}`),name:typeof a.name==='string'?a.name.slice(0,60):`穿搭 ${i+1}`,look:cleanLook(a.look),scene:validScene(a.scene)}));
-  return {schemaVersion:3,projectId:'kotoba-closet',look:cleanLook(raw.look),focus:byId.has(raw.focus)?raw.focus:'top_blouse',studyLexeme:Object.hasOwn(LEXEMES,raw.studyLexeme)?raw.studyLexeme:null,favorites:[...new Set(raw.favorites.filter(id=>byId.has(id)))],albums,learning:cleanProgress(raw.learning),settings,scene:validScene(raw.scene),study:normalizeStudy(raw.study)};
+  const look=cleanLook(raw.look);
+  return {schemaVersion:3,projectId:'kotoba-closet',look,focus:byId.has(raw.focus)?raw.focus:'top_blouse',studyLexeme:Object.hasOwn(LEXEMES,raw.studyLexeme)?raw.studyLexeme:null,favorites:[...new Set(raw.favorites.filter(id=>byId.has(id)))],albums,learning:cleanProgress(raw.learning),settings,scene:validScene(raw.scene),study:normalizeStudy(raw.study),wardrobe:normalizeWardrobe(raw.wardrobe,look,id=>byId.get(id))};
 }
 
 

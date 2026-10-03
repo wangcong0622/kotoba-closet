@@ -1,5 +1,5 @@
 const PREFIX='kotoba-closet-';
-const RELEASE='v9-2184f8e7d42d';
+const RELEASE='v9-2765b96ca675';
 const CORE_CACHE=PREFIX+RELEASE+'-core';
 const MEDIA_CACHE=PREFIX+RELEASE+'-media';
 const MEDIA_LIMIT=160;
@@ -52,6 +52,7 @@ const CORE=[
  "./data/everyday.js",
  "./data/fit.js",
  "./data/hairstyles.js",
+ "./data/item-descriptions.js",
  "./data/item-vocabulary.js",
  "./data/items-v10.js",
  "./data/items-v15.js",
@@ -76,12 +77,14 @@ const CORE=[
  "./src/storage.js",
  "./src/study-state.js",
  "./src/voice.js",
+ "./src/wardrobe-state.js",
  "./src/wardrobe.js",
  "./styles/main.css",
  "./styles/mobile.css",
  "./styles/overrides.css",
  "./styles/room.css",
- "./styles/takeover.css"
+ "./styles/takeover.css",
+ "./styles/wardrobe.css"
 ];
 const scope=new URL('./',self.location.href);
 const corePaths=new Set(CORE.map(file=>new URL(file,scope).pathname));

@@ -11,7 +11,7 @@ import {buildWornPlan} from '../src/render-worn-v18.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const core=new Set(['./','./index.html','./manifest.webmanifest','./apple-touch-icon.png','./assets/icons/app-icon-192.png','./assets/icons/app-icon-512.png']);
-for(const file of ['main','overrides','takeover','room','mobile'])core.add(`./styles/${file}.css`);
+for(const match of fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/href="([^"?#]+\.css)(?:[?#][^"]*)?"/g))core.add('./'+match[1]);
 function addModule(file){
  const relative='./'+path.relative(root,file).replaceAll('\\','/');
  if(core.has(relative))return;

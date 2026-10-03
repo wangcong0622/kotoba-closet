@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="styles/takeover.css" />
   <link rel="stylesheet" href="styles/room.css" />
   <link rel="stylesheet" href="styles/mobile.css" />
+  <link rel="stylesheet" href="styles/wardrobe.css" />
 </head>
 <body>
   <header class="topbar">
@@ -32,9 +33,9 @@
   <main id="top" class="app-shell">
     <aside class="wardrobe panel" aria-label="衣橱">
       <div class="panel-heading"><div><p class="eyebrow">DRESS UP</p><h1>今天穿什么？</h1></div><button id="learningToggle" class="icon-toggle" aria-pressed="true" title="开关学习卡">あ</button></div>
-      <label class="search"><span>⌕</span><input id="searchInput" type="search" autocomplete="off" autocapitalize="none" enterkeyhint="search" spellcheck="false" placeholder="搜索中文、日文或假名" /></label>
+      <label class="search"><span>⌕</span><input id="searchInput" type="search" maxlength="80" autocomplete="off" autocapitalize="none" enterkeyhint="search" spellcheck="false" placeholder="搜索中文、日文或假名" /></label>
       <div id="categoryTabs" class="tabs" aria-label="服饰分类"></div>
-      <div class="filter-row"><select id="styleFilter" aria-label="风格筛选"><option value="">全部风格</option><option value="classic">经典</option><option value="sweet">甜美</option><option value="casual">休闲</option></select><select id="colorFilter" aria-label="颜色筛选"><option value="">全部颜色</option><option value="white">白色</option><option value="pink">粉色</option><option value="navy">海军蓝</option><option value="blue">蓝色</option><option value="mint">薄荷绿</option><option value="black">黑色</option><option value="brown">棕色</option><option value="cream">奶油／香槟色</option></select><button id="favoriteFilter" aria-pressed="false">♡ 收藏</button></div>
+      <div class="filter-row wardrobe-browse"><button id="openFilters" aria-haspopup="dialog">筛选</button><button id="favoriteFilter" aria-pressed="false">♡ 收藏</button><select id="browseFilter" aria-label="衣橱浏览范围"><option value="all">全部单品</option><option value="recent">最近使用</option><option value="worn">当前已穿</option></select><span id="wardrobeCount" aria-live="polite"></span></div>
       <div id="mobileLookBar" class="mobile-look-bar" aria-label="当前穿搭快捷操作"></div>
       <div id="itemGrid" class="item-grid" aria-live="polite"></div>
       <p class="prototype-note">当前：16 件图片服饰，可自由搭配并学习日语。</p>
@@ -94,6 +95,8 @@
       </section>
     </aside>
   </main>
+  <dialog id="filterDialog" aria-labelledby="filterTitle"><button id="closeFilters" class="dialog-close" aria-label="关闭筛选">×</button><h2 id="filterTitle">筛选衣橱</h2><label class="wardrobe-field">风格<select id="styleFilter"><option value="">全部风格</option><option value="classic">经典</option><option value="sweet">甜美</option><option value="casual">休闲</option></select></label><label class="wardrobe-field">颜色<select id="colorFilter"></select></label><p id="filterSummary" role="status"></p><div class="wardrobe-dialog-actions"><button id="clearFilters">清除筛选</button><button id="applyFilters">完成</button></div></dialog>
+  <dialog id="lookDialog" aria-labelledby="lookTitle"><button id="closeLook" class="dialog-close" aria-label="关闭穿搭管理">×</button><h2 id="lookTitle">管理当前穿搭</h2><p class="look-help">锁定后，随机搭配和清空服饰会保留这件单品。恢复初始与载入相册会替换整套搭配。</p><div id="lookItems"></div><div class="wardrobe-dialog-actions"><button id="unlockAll">全部解锁</button><button id="clearLook" class="mobile-clear-look">清空未锁服饰</button></div></dialog>
   <dialog id="albumDialog"><button id="closeAlbum" class="dialog-close" aria-label="关闭">×</button><p class="eyebrow">LOOKBOOK</p><h2>我的相册</h2><div id="albumGrid" class="album-grid"></div></dialog>
   <p id="runtimeHint" class="runtime-hint" role="alert" hidden></p>
   <script type="module" src="src/game.js"></script>
