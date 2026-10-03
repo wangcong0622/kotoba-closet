@@ -6,7 +6,9 @@ function select(view){
  if(view==='study'&&document.querySelector('#learnPanel').hidden)document.querySelector('[data-mode="light"]').click();
  document.body.classList.toggle('mobile-study',view==='study');
  for(const button of tabs.querySelectorAll('[data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===view));
+ document.dispatchEvent(new CustomEvent('kotoba:mobile-view',{detail:view}));
 }
+export function restoreMobileView(view){if(media.matches)select(view==='study'?'study':'wardrobe');}
 tabs.addEventListener('click',event=>{const button=event.target.closest('[data-view]');if(button)select(button.dataset.view)});
 document.querySelector('#learningToggle').addEventListener('click',()=>{if(media.matches)select(document.querySelector('#learnPanel').hidden?'wardrobe':'study')});
 media.addEventListener('change',()=>{if(!media.matches)document.body.classList.remove('mobile-study');else select('wardrobe')});
@@ -49,9 +51,31 @@ function connectionToast(message){
  toast.textContent=message;clearTimeout(connectionToast.timer);
  connectionToast.timer=setTimeout(()=>{if(toast.textContent===message)toast.textContent=''},3500);
 }
-window.addEventListener('offline',()=>connectionToast('已离线：浏览过的服饰仍可继续使用。'));
+window.addEventListener('offline',()=>connectionToast(document.body.dataset.offlineReady==='true'?'已离线：已下载的服饰可继续使用，新服饰需联网。':'已离线：部分内容可能暂时无法加载，联网后会自动恢复。'));
 window.addEventListener('online',()=>connectionToast('网络已恢复。'));
-if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register(new URL('../sw.js',import.meta.url)).catch(()=>{}),{once:true});
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+ let hadController=Boolean(navigator.serviceWorker.controller),warmed=false;
+ async function warmVisited(){
+  if(warmed||!navigator.serviceWorker.controller)return;warmed=true;
+  const urls=performance.getEntriesByType('resource').map(entry=>entry.name).filter(url=>/\/assets\//.test(url));
+  const channel=new MessageChannel();channel.port1.onmessage=event=>{document.body.dataset.offlineReady=String(event.data.complete);channel.port1.close();};
+  navigator.serviceWorker.controller.postMessage({type:'CACHE_VISITED',urls},[channel.port2]);
+ }
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadController){location.reload();return;}hadController=true;warmVisited();});
+ async function registerOffline(){
+  try{
+   const registration=await navigator.serviceWorker.register(new URL('../sw.js',import.meta.url),{updateViaCache:'none'});
+   function offerUpdate(){
+    if(!registration.waiting||!navigator.serviceWorker.controller||document.querySelector('#appUpdateNotice'))return;
+    const notice=document.createElement('div');notice.id='appUpdateNotice';notice.setAttribute('role','status');notice.append(document.createTextNode('新版本已准备好 '));
+    const update=document.createElement('button');update.type='button';update.textContent='更新并继续';update.onclick=()=>registration.waiting?.postMessage({type:'SKIP_WAITING'});notice.append(update);document.body.append(notice);
+   }
+   offerUpdate();registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed')offerUpdate();});});
+   await navigator.serviceWorker.ready;warmVisited();
+  }catch{document.body.dataset.offlineReady='false';}
+ }
+ if(document.readyState==='complete')registerOffline();else window.addEventListener('load',registerOffline,{once:true});
+}
 
 // Keep the preview identical to the current stage; zoom never changes the look.
 function openCharacterZoom(){

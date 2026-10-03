@@ -1,5 +1,6 @@
 import {GARMENT_FIT} from '../data/fit.js';
 import {FIT_V7} from '../data/items-v7.js';
+import {createImageCache} from './image-cache.js';
 const garmentFit={...GARMENT_FIT,...FIT_V7};
 // Each cut was measured from the same crown anchor.  The close-cropped cuts
 // need a little more lateral volume than the long cuts so the face does not
@@ -64,12 +65,13 @@ export function buildRenderPlan({ look, getItem, backgroundSrc=BACKGROUND_SRC, b
     renderSource:{engine:'legacy',body:'legacy-base',v17Modules:[],legacySupport:Object.values(look||{}).filter(Boolean),bodyCutouts:[],bodyAlphaSources:[]}
   };
 }
-const cache=new Map();
+const cache=createImageCache();
 // All production clothing was authored against these rig anchors.  Keeping the
 // shared foreground on the native skeleton avoids a stretched waist/hip seam
 // while still applying one transform to body, garments, masks, hands and hair.
 export const BODY_PROPORTION_Y=[[0,0],[310,310],[620,620],[1030,1030],[1478,1478],[1536,1536]];
-export function loadImage(src){if(!cache.has(src)){const p=new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>{cache.delete(src);reject(new Error(`图片未能加载：${src}`))};image.src=src;});cache.set(src,p);}return cache.get(src);}
+export const loadImage=cache.load;
+export const imageCacheStats=cache.stats;
 export async function drawPlan(canvas,plan){
  const images=await Promise.all(plan.layers.map(async layer=>{
   const original=await loadImage(layer.src),maskSources=[...(layer.cutouts||[]),...(layer.cutoutSources||[])];
