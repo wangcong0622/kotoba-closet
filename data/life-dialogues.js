@@ -1,3 +1,4 @@
+import {CAFE_DIALOGUE,FRIEND_DIALOGUE} from './more-life-dialogues.js';
 // Original life conversations. Choices are evaluated against an explicit goal;
 // a different choice can be grammatical while expressing a different intention.
 const line=(speaker,jp,reading,zh)=>({speaker,jp,reading,zh});
@@ -45,7 +46,7 @@ export const FITTING_DIALOGUE={
   {id:'next-action',prompt:'听到缺货消息后，顾客准备怎样做？',answer:'try-first',options:[['try-first','先试米色，再决定是否购买'],['buy-now','不再试穿，立即购买米色'],['wait-navy','只等海军蓝，不看其他颜色']],note:'「試してから決める」的顺序是先试后决定；提出试米色不等于已经决定买。',evidence:['stock']}
  ]
 };
-export const LIFE_DIALOGUES=[FITTING_DIALOGUE];
+export const LIFE_DIALOGUES=[FITTING_DIALOGUE,CAFE_DIALOGUE,FRIEND_DIALOGUE];
 export function dialogueScript(lesson,answers=[]){
  return lesson.steps.flatMap((step,index)=>{const selected=step.choices.find(x=>x.id===answers[index]&&x.correct)||step.choices.find(x=>x.correct);return [step.staff,selected,...selected.followup];});
 }

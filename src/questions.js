@@ -2,10 +2,15 @@ import { LEXEMES, BRANDS } from '../data/content.js';
 import { SCENE_CONTENT } from '../data/scenes.js';
 import {dialogueReviewQuestion} from './dialogue-state.js';
 import {ALL_LIFE_EXPRESSIONS,LIFE_EXPRESSIONS} from '../data/life-expressions.js';
+import {PRAGMATICS} from '../data/pragmatics.js';
+import {practiceDay} from './learning.js';
 export function shuffle(values, random=Math.random) { const a=[...values]; for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a; }
 export function dueTargets(learning, now=Date.now()) {return Object.entries(learning).filter(([,r])=>r.nextReviewAt&&Date.parse(r.nextReviewAt)<=now).sort((a,b)=>Date.parse(a[1].nextReviewAt)-Date.parse(b[1].nextReviewAt)).map(([id])=>id);}
+export function weakTargets(learning){return Object.entries(learning).filter(([,r])=>r.needsWork||r.lastResult==='incorrect').sort((a,b)=>(Date.parse(b[1].lastWrongAt)||0)-(Date.parse(a[1].lastWrongAt)||0)).map(([id])=>id);}
+export function learningSummary(learning,now=Date.now()){return {today:Object.values(learning).filter(r=>r.practiceDay===practiceDay(now)).length,due:dueTargets(learning,now).filter(target=>createQuestion({target})).length,weak:weakTargets(learning).filter(target=>createQuestion({target})).length};}
 export function createQuestion({target,scene='cafe',listening=false,verb=false}) {
   if(typeof target!=='string')return null;
+  if(target.startsWith('intent:')){const row=PRAGMATICS.find(x=>`intent:${x.id}`===target);if(!row)return null;return {target,prompt:row.context+'\n「'+row.jp+'」\n'+row.prompt,options:shuffle(row.options.map(({id,text})=>({id,text}))),answer:row.answer,explain:row.zh+' '+row.note,speech:row.jp,choiceFeedback:Object.fromEntries(row.options.map(x=>[x.id,x.note+' '+row.note]))};}
   const dialogue=dialogueReviewQuestion(target);if(dialogue)return {...dialogue,options:shuffle(dialogue.options)};
   if(target.startsWith('expression:')){const row=ALL_LIFE_EXPRESSIONS.find(x=>`expression:${x.id}`===target);if(!row)return null;const pool=Object.values(LIFE_EXPRESSIONS).find(rows=>rows.includes(row));return {target,prompt:`想表达「${row.zh}」，哪句话符合？`,options:shuffle(pool.map(x=>({id:x.id,text:x.jp}))),answer:row.id,explain:row.note,speech:row.jp};}
   if(target.startsWith('brand:')) {

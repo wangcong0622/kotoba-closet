@@ -21,5 +21,6 @@ export function createShadowing({speak,canSpeak,stopPlayback,kana}){
  }
  $('#shadowOriginal').onclick=()=>{if(recorder?.state==='recording'){status('请先停止录音，再听原音。');return;}$('#shadowReplay').pause();speak(example.jp);};$('#shadowRecord').onclick=record;$('#shadowStop').onclick=stop;
  $('#shadowReplay').addEventListener('play',stopPlayback);$('.dialog-close').onclick=()=>dialog.close();dialog.addEventListener('close',clean);window.addEventListener('pagehide',clean);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden||!dialog.open)return;if(recorder?.state==='recording')stop();else if($('#shadowRecord').disabled&&navigator.mediaDevices?.getUserMedia&&window.MediaRecorder){clean();$('#shadowRecord').disabled=false;status('录音请求已暂停，返回后可重新开始。');}$('#shadowReplay').pause();stopPlayback();});
  return {open(row){clean();example=row;$('.shadow-jp').textContent=row.jp;$('.shadow-reading').textContent=row.reading;$('.shadow-reading').hidden=!kana();$('.shadow-translation').textContent=row.zh;$('#shadowOriginal').disabled=!canSpeak(row.jp);$('#shadowStop').disabled=true;const supported=Boolean(navigator.mediaDevices?.getUserMedia&&window.MediaRecorder);$('#shadowRecord').disabled=!supported;status(supported?'先听原音，试着按停顿跟读，再录下自己的表达。':'当前浏览器不支持录音，可继续播放原音跟读。');dialog.showModal();},close(){if(dialog.open)dialog.close();else clean();}};
 }

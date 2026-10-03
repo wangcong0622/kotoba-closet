@@ -9,7 +9,7 @@ export function normalizeStudy(value = {}) {
   return {
     level: choices(value.level, ['basic', 'advanced'], 'basic'),
     tab: choices(value.tab, ['word', 'scene', 'dialogue', 'practice'], 'word'),
-    practiceMode: choices(value.practiceMode, ['word', 'scene', 'listening'], 'word'),
+    practiceMode: choices(value.practiceMode, ['word', 'scene', 'listening', 'intent'], 'word'),
     mobileView: choices(value.mobileView, ['wardrobe', 'study'], 'wardrobe'),
     wordPositions: positions(value.wordPositions),
     scenePositions: positions(value.scenePositions),

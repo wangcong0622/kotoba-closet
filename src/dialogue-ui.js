@@ -1,5 +1,5 @@
-import {FITTING_DIALOGUE,dialogueScript} from '../data/life-dialogues.js';
-import {normalizeDialogue} from './dialogue-state.js';
+import {LIFE_DIALOGUES,dialogueScript} from '../data/life-dialogues.js';
+import {normalizeDialogue,switchDialogue} from './dialogue-state.js';
 export function createDialogueUI({root,getState,save,review,speak,play,canPlay,stopPlayback,shadow}){
  let cancelAudio=null,playing=false,roleFeedback=null,audioStatus='';
  const node=(tag,text,cls)=>{const element=document.createElement(tag);if(text!==undefined)element.textContent=text;if(cls)element.className=cls;return element;};
@@ -13,15 +13,16 @@ export function createDialogueUI({root,getState,save,review,speak,play,canPlay,s
  function switchMode(mode){stop();session().mode=mode;roleFeedback=null;save();render();}
  function reset(){stop();const current=session();getState().study.dialogue=normalizeDialogue({...current,...(current.mode==='role'?{roleAnswers:[],roleCursor:0}:{listeningAnswers:{},listeningIndex:0,assisted:false,heard:false})});roleFeedback=null;save();render();}
  function render(){
-  const state=getState(),current=session(),lesson=FITTING_DIALOGUE;root.replaceChildren();
-  const heading=node('div',undefined,'dialogue-heading');heading.append(node('p','N2 生活口语 · 商店交流','eyebrow'),node('h3',lesson.title),node('p',lesson.goal,'dialogue-goal'));root.append(heading);
+  const state=getState(),current=session(),lesson=LIFE_DIALOGUES.find(x=>x.id===current.lesson)||LIFE_DIALOGUES[0];root.replaceChildren();
+  const label=node('label','选择生活会话','dialogue-picker'),picker=node('select');picker.id='dialogueLesson';for(const item of LIFE_DIALOGUES){const progress=item.id===current.lesson?current:current.sessions[item.id],option=node('option',`${item.title} · ${progress.roleCursor}/${item.steps.length} 轮`);option.value=item.id;picker.append(option);}picker.value=lesson.id;picker.onchange=()=>{stop();getState().study.dialogue=switchDialogue(current,picker.value);roleFeedback=null;save();render();root.querySelector('#dialogueLesson').focus();};label.append(picker);root.append(label);
+  const heading=node('div',undefined,'dialogue-heading');heading.append(node('p','N2 生活口语 · 连续会话','eyebrow'),node('h3',lesson.title),node('p',lesson.goal,'dialogue-goal'));root.append(heading);
   const modes=node('div',undefined,'dialogue-modes');modes.setAttribute('role','group');modes.setAttribute('aria-label','会话练习方式');for(const [mode,label] of [['role','接话练习'],['listening','对话听力']]){const control=button(label,()=>switchMode(mode));control.dataset.dialogueMode=mode;control.setAttribute('aria-pressed',String(current.mode===mode));modes.append(control);}root.append(modes);
   if(current.mode==='role')renderRole(current,lesson);else renderListening(current,lesson);
   root.append(button('重新练习',reset,'text-btn dialogue-restart'));
  }
  function renderRole(current,lesson){
   const index=current.roleCursor;
-  if(index>=lesson.steps.length){root.append(node('h4','对话完成'),node('p',current.roleAnswers.at(-1)==='think'?'你说明了顾虑，并礼貌表示今天先不买。':'你说明了需求，试穿其他款式后作出了选择。','dialogue-feedback'),audioControls(dialogueScript(lesson,current.roleAnswers)),scriptView(dialogueScript(lesson,current.roleAnswers)));root.append(button('进入对话听力',()=>switchMode('listening')));return;}
+  if(index>=lesson.steps.length){root.append(node('h4','对话完成'),node('p',lesson.id==='fitting'?(current.roleAnswers.at(-1)==='think'?'你说明了顾虑，并礼貌表示今天先不买。':'你说明了需求，试穿其他款式后作出了选择。'):'你接住了对方提供的信息，说明了自己的条件，并商量好下一步。','dialogue-feedback'),audioControls(dialogueScript(lesson,current.roleAnswers)),scriptView(dialogueScript(lesson,current.roleAnswers)));root.append(button('进入对话听力',()=>switchMode('listening')));return;}
   const step=lesson.steps[index],selected=step.choices.find(x=>x.id===current.roleAnswers[index]);
   if(index){const history=node('details',undefined,'dialogue-history');history.append(node('summary','回顾已完成的对话'),scriptView(dialogueScript({...lesson,steps:lesson.steps.slice(0,index)},current.roleAnswers)));root.append(history);}
   root.append(node('p',`第 ${index+1}/${lesson.steps.length} 轮 · ${step.title}`,'dialogue-progress'),lineCard(step.staff),node('p',step.goal,'dialogue-task'));
@@ -31,7 +32,7 @@ export function createDialogueUI({root,getState,save,review,speak,play,canPlay,s
   if(selected){root.append(lineCard(selected),...selected.followup.map(line=>lineCard(line)));const next=button(index===lesson.steps.length-1?'查看完整对话':'继续对话',()=>{stop();current.roleCursor++;roleFeedback=null;save();render();});next.id='dialogueNext';root.append(next);}
  }
  function renderListening(current,lesson){
-  const lines=dialogueScript(lesson),index=current.listeningIndex,question=lesson.listening[index];root.append(audioControls(lines));
+  const lines=dialogueScript(lesson),index=current.listeningIndex,question=lesson.listening[index];root.append(node('p','听力使用固定对话版本；接话练习中的其他合理结局不会改变这段原音。','dialogue-version-note'),audioControls(lines));
   if(!question){const correct=lesson.listening.filter(q=>current.listeningAnswers[q.id]===q.answer).length;root.append(node('h4',`完成 · ${correct}/${lesson.listening.length} 题答对`),node('p',current.assisted?'本次使用了阅读辅助，听力熟练度不会因此提升。':'可以对照原文，重听之前漏掉的条件与转折。','dialogue-feedback'),scriptView(lines));return;}
   root.append(node('p',`第 ${index+1}/${lesson.listening.length} 题${!current.heard&&!current.assisted?' · 听完对话后可作答':''}`,'dialogue-progress'),node('h4',question.prompt));
   const answer=current.listeningAnswers[question.id],options=node('div',undefined,'dialogue-options');for(const [id,text] of question.options){const control=button(text,()=>{stop();current.listeningAnswers[question.id]=id;review(`hear:${lesson.id}:${question.id}`,id===question.answer,{assisted:current.assisted});save();render();});control.dataset.dialogueAnswer=id;control.disabled=Boolean(answer)||(!current.heard&&!current.assisted);if(answer&&id===question.answer)control.classList.add('correct-answer');options.append(control);}root.append(options);

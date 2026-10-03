@@ -1,6 +1,7 @@
 export const REVIEW_INTERVALS_DAYS = [1, 3, 7, 14, 30];
 const MINUTE=60*1000,DAY=24*60*MINUTE;
 const validDate=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))?value:null;
+export function practiceDay(now=Date.now()){const date=new Date(now);return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
 function inferLastReview(record){
  if(!validDate(record.nextReviewAt)||!['correct','incorrect'].includes(record.lastResult))return null;
  const delay=record.lastResult==='incorrect'?10*MINUTE:REVIEW_INTERVALS_DAYS[Math.max(0,Math.min((record.streak||1)-1,4))]*DAY;
@@ -14,7 +15,10 @@ export function normalizeLearning(value){
   nextReviewAt:validDate(r.nextReviewAt)||(validDate(r.viewedAt)?new Date(Date.parse(r.viewedAt)+DAY).toISOString():null),
   lastResult:['correct','incorrect'].includes(r.lastResult)?r.lastResult:null,
   lastReviewedAt:validDate(r.lastReviewedAt)||inferLastReview(r),
-  attempts:Number.isInteger(r.attempts)?Math.max(0,Math.min(r.attempts,100000)):0
+  attempts:Number.isInteger(r.attempts)?Math.max(0,Math.min(r.attempts,100000)):0,
+  lastWrongAt:validDate(r.lastWrongAt)||(r.lastResult==='incorrect'?validDate(r.lastReviewedAt)||inferLastReview(r):null),
+  needsWork:r.needsWork===true||r.lastResult==='incorrect',
+  practiceDay:typeof r.practiceDay==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.practiceDay)?r.practiceDay:null
  }]));
 }
 export function markViewed(learning,id,now=Date.now()){
@@ -29,7 +33,7 @@ export function recordReview(learning,id,correct,now=Date.now(),{assisted=false}
  const streak=correct?(advance?Math.min(previous.streak+1,REVIEW_INTERVALS_DAYS.length):previous.streak):0;
  const retry=now+10*MINUTE,previousDue=Date.parse(previous.nextReviewAt),earliestRetry=Math.min(Number.isFinite(previousDue)&&previousDue>now?previousDue:Infinity,retry);
  const nextReviewAt=advance?new Date(now+REVIEW_INTERVALS_DAYS[streak-1]*DAY).toISOString():!correct||assisted?new Date(earliestRetry).toISOString():previous.nextReviewAt||new Date(retry).toISOString();
- return {...normalized,[id]:{viewedAt:previous.viewedAt||new Date(now).toISOString(),streak,nextReviewAt,lastResult:correct?'correct':'incorrect',lastReviewedAt:advance||!correct||assisted?new Date(now).toISOString():previous.lastReviewedAt,attempts:Math.min(previous.attempts+1,100000)}};
+ return {...normalized,[id]:{viewedAt:previous.viewedAt||new Date(now).toISOString(),streak,nextReviewAt,lastResult:correct?'correct':'incorrect',lastReviewedAt:advance||!correct||assisted?new Date(now).toISOString():previous.lastReviewedAt,attempts:Math.min(previous.attempts+1,100000),lastWrongAt:correct?previous.lastWrongAt||null:new Date(now).toISOString(),needsWork:!correct||(!advance&&previous.needsWork===true),practiceDay:assisted?previous.practiceDay||null:practiceDay(now)}};
 }
 export function reviewStatus(record,now=Date.now()){
  if(!record?.viewedAt)return '新词';
