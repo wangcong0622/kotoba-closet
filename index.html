@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="styles/room.css" />
   <link rel="stylesheet" href="styles/mobile.css" />
   <link rel="stylesheet" href="styles/wardrobe.css" />
+  <link rel="stylesheet" href="styles/life-learning.css" />
 </head>
 <body>
   <header class="topbar">
@@ -61,11 +62,12 @@
       <nav class="learning-tabs" role="tablist" aria-label="日语学习内容">
         <button data-learning-tab="word" role="tab" aria-selected="true" aria-controls="learningWord">单词</button>
         <button data-learning-tab="scene" role="tab" aria-selected="false" aria-controls="learningScene">场景</button>
+        <button data-learning-tab="dialogue" role="tab" aria-selected="false" aria-controls="learningDialogue">会话</button>
         <button data-learning-tab="practice" role="tab" aria-selected="false" aria-controls="practiceDetails">练习</button>
       </nav>
 
       <section id="learningWord" class="learning-page" data-learning-panel="word" role="tabpanel">
-        <div id="studyLevel" class="study-level" role="group" aria-label="例句难度"><button data-study-level="basic" aria-pressed="true">入门例句</button><button data-study-level="advanced" aria-pressed="false">进阶 · N3–N2</button></div>
+        <div id="studyLevel" class="study-level" role="group" aria-label="例句难度"><button data-study-level="basic" aria-pressed="true">基础例句</button><button data-study-level="advanced" aria-pressed="false">N2 · 生活口语</button></div>
         <article id="wordCard" class="word-card"></article>
         <label class="slow-control"><input id="slowSetting" type="checkbox" /> 慢一点读</label>
         <details class="extra-settings"><summary>浏览更多词汇</summary><label class="lexeme-picker">词汇浏览<select id="lexemeSelect" aria-label="选择学习词汇"></select></label></details>
@@ -82,6 +84,7 @@
         <button id="scenePracticeBtn" class="scene-practice-btn">用当前场景开始练习</button>
       </section>
 
+      <section id="learningDialogue" class="learning-page dialogue-page" data-learning-panel="dialogue" role="tabpanel" hidden><div id="dialogueCard"></div></section>
       <section id="practiceDetails" class="learning-page practice-page" data-learning-panel="practice" role="tabpanel" hidden>
         <div class="practice-head"><h3>专项练习</h3><button id="newQuestionBtn" class="text-btn">换一题</button></div>
         <div id="practiceModes" class="practice-modes" role="group" aria-label="练习类型">

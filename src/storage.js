@@ -3,6 +3,8 @@ import { normalizeLearning } from './learning.js';
 import { SCENE_CONTENT } from '../data/scenes.js';
 import { normalizeStudy } from './study-state.js';
 import { normalizeWardrobe } from './wardrobe-state.js';
+import { dialogueTarget } from './dialogue-state.js';
+import { ALL_LIFE_EXPRESSIONS } from '../data/life-expressions.js';
 const byId = new Map(ITEMS.map(item => [item.id, item]));
 export const INITIAL_LOOK = {hair:'hair_straight_v23',top:'top_blouse',bottom:'bottom_pleat',shoes:'shoes_maryjane_socks_v19'};
 export function cleanLook(value) {
@@ -21,7 +23,7 @@ export function cleanLook(value) {
 export const validScene = id => SCENES.some(scene => scene[0] === id) ? id : 'cafe';
 export function cleanProgress(raw) {
   const normalized = normalizeLearning(raw);
-  return Object.fromEntries(Object.entries(normalized).filter(([id]) => Object.hasOwn(LEXEMES,id) || (id.startsWith('brand:') && Object.hasOwn(BRANDS,id.slice(6))) || SCENE_CONTENT.some(row=>`life:${row.id}`===id)));
+  return Object.fromEntries(Object.entries(normalized).filter(([id]) => Object.hasOwn(LEXEMES,id) || (id.startsWith('brand:') && Object.hasOwn(BRANDS,id.slice(6))) || SCENE_CONTENT.some(row=>`life:${row.id}`===id) || dialogueTarget(id) || ALL_LIFE_EXPRESSIONS.some(row=>`expression:${row.id}`===id)));
 }
 export function normalizeSave(raw) {
   if (!raw || ![1,2,3].includes(raw.schemaVersion) || !raw.look || typeof raw.look !== 'object' || Array.isArray(raw.look) || !Array.isArray(raw.favorites)) throw new Error('备份格式或版本不受支持');

@@ -27,7 +27,7 @@ async function main(){
  await page.locator('[data-view=study]').click();await page.locator('[data-study-level=advanced]').click();
  const cloze=page.locator('#wordCard').getByRole('button',{name:'填空自测',exact:true});await cloze.click();
  assert.equal(await page.locator('#wordCard').getByRole('button',{name:'显示答案',exact:true}).count(),1);
- assert(!await page.locator('#wordCard').innerText().then(text=>text.includes('だけでなく')));
+ const focus=await page.evaluate(async()=>{const {LIFE_EXPRESSIONS}=await import('./data/life-expressions.js');return LIFE_EXPRESSIONS.clothes[0].focus;});assert(!await page.locator('#wordCard').innerText().then(text=>text.includes(focus)));
  await page.locator('#slowSetting').check();assert.equal(await page.locator('#wordCard').getByRole('button',{name:'显示答案',exact:true}).count(),1);
  await page.locator('#wordCard').getByRole('button',{name:/换个句型/}).click();
  const sentence=await page.locator('#wordCard .sentence').innerText();

@@ -6,11 +6,13 @@ import {INITIAL_LOOK} from '../src/storage.js';
 import {WORN_V18} from '../data/worn-v18.js';
 import {ITEMS, LEXEMES} from '../data/content.js';
 import {NANAMI_AUDIO} from '../data/audio-nanami.js';
+import {LIFE_AUDIO} from '../data/life-audio.js';
 import {SCENE_BACKGROUNDS} from '../data/backgrounds.js';
 import {buildWornPlan} from '../src/render-worn-v18.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const core=new Set(['./','./index.html','./manifest.webmanifest','./apple-touch-icon.png','./assets/icons/app-icon-192.png','./assets/icons/app-icon-512.png']);
+for(const file of Object.values(LIFE_AUDIO))core.add('./'+file);
 for(const match of fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/href="([^"?#]+\.css)(?:[?#][^"]*)?"/g))core.add('./'+match[1]);
 function addModule(file){
  const relative='./'+path.relative(root,file).replaceAll('\\','/');
